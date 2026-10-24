@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>ESP32 FX</title>
+<style>
+:root{--bg:#10141d;--panel:#1d2535;--panel2:#2a3449;--line:#3a4660;--text:#eef1f7;--muted:#97a3bb;--acc:#f0b441;--teal:#46d3c0;--red:#ef5b5b}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;background:#05070b;color:var(--text);font-family:"Vazirmatn","Vazir",Tahoma,"Segoe UI",Roboto,system-ui,sans-serif;overflow:hidden}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+button{font-family:inherit;color:inherit;cursor:pointer}
+svg.i{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* home menu */
+.grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:3px;min-height:0}
+.tile{position:relative;border:0;background:var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(2px,1.2vh,8px);padding:4px}
+.tile:active{filter:brightness(.88)}
+.tile svg.i{width:clamp(30px,17vh,76px);height:clamp(30px,17vh,76px)}
+.tile .n{font-size:clamp(13px,4.6vh,22px);font-weight:700;line-height:1.2;text-align:center}
+.tile .e{font-size:clamp(9px,3vh,13px);opacity:.9;direction:ltr;text-align:center}
+.tile .led{position:absolute;top:10px;inset-inline-start:10px;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.3)}
+.tile.on .led{background:#fff;box-shadow:0 0 7px #fff}
+.tile:not(.on):not(.sys){opacity:.5}
+
+/* pages */
+.hd{display:flex;align-items:center;gap:12px;padding:6px 14px;min-height:clamp(42px,14vh,58px);background:var(--c);color:#fff;flex:none}
+.hd h1{font-size:clamp(16px,5vh,22px);font-weight:700;line-height:1.1}
+.hd small{display:block;font-size:11px;opacity:.85;direction:ltr;text-align:start}
+.hd svg.i{width:30px;height:30px}
+.hd .sp{flex:1}
+.back{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.22);display:grid;place-items:center}
+.back svg{width:22px;height:22px}
+html[dir=ltr] .back svg{transform:scaleX(-1)}
+.cn{display:flex;align-items:center;gap:6px;font-size:11px;background:rgba(0,0,0,.25);border-radius:99px;padding:4px 10px}
+.cn i{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.cn.ok i{background:#5dff9a}
+.body{flex:1;overflow:auto;padding:12px 16px 16px;min-height:0;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+.card{background:var(--panel);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.row{min-width:0}
+.lab{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:8px}
+.lab b{direction:ltr;color:var(--acc);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;direction:ltr;background:linear-gradient(to right,var(--acc) var(--p,50%),var(--line) var(--p,50%));touch-action:pan-y;margin:8px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--bg)}
+.trow{display:flex;justify-content:space-between;align-items:center;font-size:13px;gap:8px}
+.sw{width:50px;height:28px;border-radius:14px;background:var(--line);border:0;position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw[aria-pressed=true]{background:var(--teal)}
+.sw[aria-pressed=true]::after{transform:translateX(22px)}
+html[dir=rtl] .sw[aria-pressed=true]::after{transform:translateX(-22px)}
+.hd .sw{background:rgba(0,0,0,.3)}
+.hd .sw[aria-pressed=true]{background:#fff}
+.hd .sw[aria-pressed=true]::after{background:var(--c)}
+.seg{display:flex;background:var(--bg);border-radius:12px;padding:3px;gap:3px;margin-bottom:12px;direction:ltr}
+.seg button{flex:1;border:0;background:none;color:var(--muted);padding:9px 4px;border-radius:9px;font-size:13px;min-width:0}
+.seg button.a{background:var(--panel2);color:var(--text)}
+.btn{border:0;border-radius:12px;padding:11px 16px;background:var(--panel2);color:var(--text);font-size:14px}
+.btn:active{background:var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{background:var(--bg);border-radius:10px;padding:6px 10px;font-size:12px;direction:ltr;color:var(--teal)}
+.cap{font-size:12px;color:var(--muted);margin-bottom:8px}
+.bar{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;direction:ltr}
+.bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--teal) 0 65%,#f0b441 65% 88%,var(--red) 88%);background-size:100% 100%}
+.mt{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:11px;color:var(--muted);direction:ltr}
+.gr .bar>div{background:var(--acc);margin-left:auto}
+.gr .bar{direction:rtl}
+.info{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.info div{background:var(--bg);border-radius:12px;padding:8px 10px;font-size:11px;color:var(--muted)}
+.info b{display:block;font-size:16px;color:var(--text);direction:ltr;text-align:start;font-weight:600}
+.clip{width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block}
+.clip.h{background:var(--red)}
+.inp{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px;font-size:15px;direction:ltr}
+.lang{display:flex;flex-wrap:wrap;gap:8px}
+.lang button{border:1px solid var(--line);background:none;border-radius:10px;padding:9px 14px;font-size:14px}
+.lang button.a{background:var(--acc);color:#10141d;border-color:var(--acc);font-weight:700}
+
+/* eq */
+.eq{display:flex;justify-content:space-between;direction:ltr;gap:2px}
+.band{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);touch-action:none}
+.bt{position:relative;width:100%;height:clamp(110px,34vh,200px);cursor:ns-resize}
+.bt::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;border-radius:2px;background:var(--line)}
+.bt .z{position:absolute;left:25%;right:25%;top:50%;height:1px;background:var(--muted);opacity:.6}
+.bt .f{position:absolute;left:50%;width:4px;margin-left:-2px;background:var(--acc);border-radius:2px}
+.bt .k{position:absolute;left:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:#fff;border:4px solid var(--bg)}
+.band em{font-style:normal;color:var(--acc);font-variant-numeric:tabular-nums}
+.curve{width:100%;height:46px;display:block;margin-bottom:6px}
+.rot{position:fixed;inset:0;background:#05070b;color:#fff;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:18px;z-index:9}
+@media (orientation:portrait){.rot{display:flex}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="rot" id="rot"></div>
+<script>
+"use strict";
+/* ============================== languages ============================== */
+const LANGS={fa:'فارسی',en:'English',ar:'العربية',tr:'Türkçe',ru:'Русский'};
+const RTL={fa:1,ar:1};
+const L={
+fa:{fx1:'افکت ۱',fx2:'افکت ۲',eq:'اکولایزر',comp:'کمپرسور',lim:'لیمیتر',afb:'انتی فیدبک',io:'ورودی / خروجی',set:'تنظیمات',
+echo:'اکو',rev:'ریورب',dly:'دیلی',sd:'استریو دیلی',off:'خاموش',
+p_time:'زمان',p_rep:'تعداد تکرار',p_tone:'نرمی صدا (فیلتر)',p_mix:'میزان ترکیب',p_room:'اندازه اتاق',p_decay:'طول محو شدن',p_damp:'جذب صدای زیر',p_pre:'پیش‌تاخیر',p_fb:'فیدبک',p_lp:'فیلتر روی تکرارها',p_l:'تاخیر چپ',p_r:'تاخیر راست',p_wid:'عرض استریو',p_pp:'حالت پینگ‌پنگ',tap:'ضرباهنگ (Tap)',
+thr:'آستانه (Threshold)',ratio:'نسبت (Ratio)',att:'شروع (Attack)',rel:'رهاسازی (Release)',mk:'جبران ولوم',ceil:'سقف خروجی',lgain:'تقویت ورودی',
+mode:'حالت',auto:'خودکار',manual:'دستی',sens:'حساسیت',nn:'تعداد فیلتر',depth:'عمق حذف',notches:'فیلترهای فعال',clear:'پاک کردن فیلترها',none:'هنوز فرکانسی حذف نشده',
+ing:'گین ورودی',vol:'ولوم خروجی',mute:'قطع صدا',buf:'بافر',cpu:'پردازنده',rate:'نرخ نمونه',bits:'کدک',
+lang:'زبان',addr:'آدرس ESP32',connect:'اتصال',wifi:'تنظیمات وای‌فای گوشی',save:'ذخیره در ESP32',reset:'بازگشت به تنظیمات کارخانه',conn:'متصل',disc:'قطع',wifihint:'ابتدا به وای‌فای ESP32-FX وصل شوید',rot:'گوشی را بچرخانید (حالت افقی)',eqhint:'برای صفر کردن هر باند دو بار بزنید',gr:'کاهش'},
+en:{fx1:'Effect 1',fx2:'Effect 2',eq:'Equalizer',comp:'Compressor',lim:'Limiter',afb:'Anti-Feedback',io:'Input / Output',set:'Settings',
+echo:'Echo',rev:'Reverb',dly:'Delay',sd:'Stereo Delay',off:'Off',
+p_time:'Time',p_rep:'Repeats',p_tone:'Tone (filter)',p_mix:'Mix',p_room:'Room size',p_decay:'Decay time',p_damp:'High damping',p_pre:'Pre-delay',p_fb:'Feedback',p_lp:'Repeat filter',p_l:'Left delay',p_r:'Right delay',p_wid:'Stereo width',p_pp:'Ping-pong',tap:'Tap tempo',
+thr:'Threshold',ratio:'Ratio',att:'Attack',rel:'Release',mk:'Makeup gain',ceil:'Ceiling',lgain:'Input boost',
+mode:'Mode',auto:'Auto',manual:'Manual',sens:'Sensitivity',nn:'Filters',depth:'Cut depth',notches:'Active filters',clear:'Clear filters',none:'No frequency cut yet',
+ing:'Input gain',vol:'Output volume',mute:'Mute',buf:'Buffer',cpu:'CPU',rate:'Sample rate',bits:'Codec',
+lang:'Language',addr:'ESP32 address',connect:'Connect',wifi:'Phone Wi-Fi settings',save:'Save in ESP32',reset:'Factory reset',conn:'Connected',disc:'Offline',wifihint:'First join the ESP32-FX Wi-Fi network',rot:'Rotate your phone (landscape)',eqhint:'Double-tap a band to reset it',gr:'Reduction'},
+ar:{fx1:'المؤثر 1',fx2:'المؤثر 2',eq:'المعادل',comp:'الضاغط',lim:'المحدِّد',afb:'مانع الارتجاع',io:'المدخل / المخرج',set:'الإعدادات',
+echo:'صدى',rev:'ريفيرب',dly:'ديلاي',sd:'ديلاي ستيريو',off:'إيقاف',
+p_time:'الزمن',p_rep:'التكرار',p_tone:'النغمة (فلتر)',p_mix:'المزج',p_room:'حجم الغرفة',p_decay:'زمن الاضمحلال',p_damp:'تخميد الترددات العالية',p_pre:'تأخير مسبق',p_fb:'الارتجاع',p_lp:'فلتر التكرار',p_l:'تأخير اليسار',p_r:'تأخير اليمين',p_wid:'عرض الستيريو',p_pp:'بينغ بونغ',tap:'ضبط الإيقاع',
+thr:'العتبة',ratio:'النسبة',att:'زمن الهجوم',rel:'زمن الإطلاق',mk:'تعويض الكسب',ceil:'السقف',lgain:'رفع المدخل',
+mode:'الوضع',auto:'تلقائي',manual:'يدوي',sens:'الحساسية',nn:'عدد المرشحات',depth:'عمق القطع',notches:'المرشحات النشطة',clear:'مسح المرشحات',none:'لم يتم قطع أي تردد بعد',
+ing:'كسب المدخل',vol:'مستوى الخرج',mute:'كتم',buf:'الذاكرة المؤقتة',cpu:'المعالج',rate:'معدل العينة',bits:'الكودك',
+lang:'اللغة',addr:'عنوان ESP32',connect:'اتصال',wifi:'إعدادات الواي فاي',save:'حفظ في ESP32',reset:'إعادة ضبط المصنع',conn:'متصل',disc:'غير متصل',wifihint:'اتصل أولاً بشبكة ESP32-FX',rot:'أدر الهاتف (وضع أفقي)',eqhint:'انقر مرتين على النطاق لإعادته للصفر',gr:'تخفيض'},
+tr:{fx1:'Efekt 1',fx2:'Efekt 2',eq:'Ekolayzer',comp:'Kompresör',lim:'Limiter',afb:'Geri Besleme Önleyici',io:'Giriş / Çıkış',set:'Ayarlar',
+echo:'Yankı',rev:'Reverb',dly:'Gecikme',sd:'Stereo Gecikme',off:'Kapalı',
+p_time:'Süre',p_rep:'Tekrar',p_tone:'Ton (filtre)',p_mix:'Karışım',p_room:'Oda boyutu',p_decay:'Sönüm süresi',p_damp:'Tiz sönümleme',p_pre:'Ön gecikme',p_fb:'Geri besleme',p_lp:'Tekrar filtresi',p_l:'Sol gecikme',p_r:'Sağ gecikme',p_wid:'Stereo genişlik',p_pp:'Ping-pong',tap:'Tempo (Tap)',
+thr:'Eşik',ratio:'Oran',att:'Atak',rel:'Bırakma',mk:'Kazanç telafisi',ceil:'Tavan',lgain:'Giriş artırma',
+mode:'Mod',auto:'Otomatik',manual:'Manuel',sens:'Hassasiyet',nn:'Filtre sayısı',depth:'Kesme derinliği',notches:'Aktif filtreler',clear:'Filtreleri temizle',none:'Henüz frekans kesilmedi',
+ing:'Giriş kazancı',vol:'Çıkış ses seviyesi',mute:'Sessiz',buf:'Tampon',cpu:'İşlemci',rate:'Örnekleme',bits:'Kodek',
+lang:'Dil',addr:'ESP32 adresi',connect:'Bağlan',wifi:'Telefon Wi-Fi ayarları',save:"ESP32'ye kaydet",reset:'Fabrika ayarları',conn:'Bağlı',disc:'Bağlı değil',wifihint:"Önce ESP32-FX Wi-Fi ağına bağlanın",rot:'Telefonu çevirin (yatay)',eqhint:'Bandı sıfırlamak için çift dokunun',gr:'Azaltma'},
+ru:{fx1:'Эффект 1',fx2:'Эффект 2',eq:'Эквалайзер',comp:'Компрессор',lim:'Лимитер',afb:'Антифидбэк',io:'Вход / Выход',set:'Настройки',
+echo:'Эхо',rev:'Реверб',dly:'Дилей',sd:'Стерео дилей',off:'Выкл',
+p_time:'Время',p_rep:'Повторы',p_tone:'Тембр (фильтр)',p_mix:'Микс',p_room:'Размер комнаты',p_decay:'Время затухания',p_damp:'Демпфирование ВЧ',p_pre:'Предзадержка',p_fb:'Обратная связь',p_lp:'Фильтр повторов',p_l:'Задержка слева',p_r:'Задержка справа',p_wid:'Ширина стерео',p_pp:'Пинг-понг',tap:'Темп (Tap)',
+thr:'Порог',ratio:'Степень',att:'Атака',rel:'Восстановление',mk:'Компенсация усиления',ceil:'Потолок',lgain:'Усиление входа',
+mode:'Режим',auto:'Авто',manual:'Ручной',sens:'Чувствительность',nn:'Кол-во фильтров',depth:'Глубина подавления',notches:'Активные фильтры',clear:'Сбросить фильтры',none:'Частоты ещё не подавлены',
+ing:'Усиление входа',vol:'Громкость выхода',mute:'Без звука',buf:'Буфер',cpu:'Процессор',rate:'Частота',bits:'Кодек',
+lang:'Язык',addr:'Адрес ESP32',connect:'Подключить',wifi:'Настройки Wi-Fi телефона',save:'Сохранить в ESP32',reset:'Сброс к заводским',conn:'Подключено',disc:'Нет связи',wifihint:'Сначала подключитесь к сети ESP32-FX',rot:'Поверните телефон (горизонтально)',eqhint:'Двойное касание — сброс полосы',gr:'Сжатие'}
+};
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let lang=store.get('fx.lang')||((navigator.language||'en').slice(0,2));
+if(!L[lang])lang='en';
+const t=k=>(L[lang][k]??L.en[k]??k);
+
+/* ============================== data model ============================== */
+const COL={fx1:'#d9780f',fx2:'#d93a40',eq:'#27a548',comp:'#10a2b0',lim:'#4d68e6',afb:'#7650d8',io:'#1c8fda',set:'#58a22a'};
+const ORDER=['fx1','fx2','eq','comp','lim','afb','io','set'];
+const IC={
+fx1:'<path d="M2 14c2-7 4-7 5.5 0s3.5 7 5.5 0"/><circle cx="18" cy="6" r="4"/><text x="18" y="8.6" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor" stroke="none">1</text>',
+fx2:'<path d="M2 14c2-7 4-7 5.5 0s3.5 7 5.5 0"/><circle cx="18" cy="6" r="4"/><text x="18" y="8.6" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor" stroke="none">2</text>',
+eq:'<path d="M6 4v16M12 4v16M18 4v16"/><circle cx="6" cy="14" r="2.3" fill="currentColor"/><circle cx="12" cy="8" r="2.3" fill="currentColor"/><circle cx="18" cy="15" r="2.3" fill="currentColor"/>',
+comp:'<path d="M4 4v16h16"/><path d="M4 20l8-8 8-3"/>',
+lim:'<path d="M3 5h18"/><path d="M4 19c2-8 4-11 8-11s6 3 8 11"/>',
+afb:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"/>',
+io:'<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
+set:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+back:'<path d="M9 5l7 7-7 7"/>'
+};
+const svg=(n,c)=>`<svg class="i ${c||''}" viewBox="0 0 24 24">${IC[n]}</svg>`;
+const FXT=['echo','rev','dly','sd'];
+const SP={
+echo:[['time',50,1000,1,' ms'],['rep',0,95,1,' %'],['tone',500,12000,50,' Hz'],['mix',0,100,1,' %']],
+rev:[['room',0,100,1,' %'],['decay',0.2,8,0.1,' s'],['damp',0,100,1,' %'],['pre',0,200,1,' ms'],['mix',0,100,1,' %']],
+dly:[['time',0,2000,10,' ms'],['fb',0,95,1,' %'],['lp',200,12000,50,' Hz'],['mix',0,100,1,' %']],
+sd:[['l',0,2000,5,' ms'],['r',0,2000,5,' ms'],['fb',0,95,1,' %'],['wid',0,100,1,' %'],['mix',0,100,1,' %'],['pp']]
+};
+const DEF={'g.ing':0,'g.vol':100,'g.mute':0,'eq.on':1,'c.on':0,'c.thr':-18,'c.ratio':4,'c.att':10,'c.rel':120,'c.mk':0,'l.on':1,'l.ceil':-1,'l.rel':60,'l.gain':0,'a.on':0,'a.mode':0,'a.sens':60,'a.n':6,'a.depth':12};
+for(let i=0;i<10;i++)DEF['eq.'+i]=0;
+[1,2].forEach(n=>{const o={on:0,type:n==1?0:1,'echo.time':320,'echo.rep':40,'echo.tone':5000,'echo.mix':30,'rev.room':60,'rev.decay':2.4,'rev.damp':45,'rev.pre':20,'rev.mix':25,'dly.time':500,'dly.fb':35,'dly.lp':6000,'dly.mix':30,'sd.l':375,'sd.r':750,'sd.fb':35,'sd.wid':80,'sd.mix':30,'sd.pp':1};
+ for(const k in o)DEF['e'+n+'.'+k]=o[k];});
+const V=Object.assign({},DEF);
+let page='home',conn=false,afbList=[],ws=null,retry=null,fw='';
+let host=store.get('fx.host')||'192.168.4.1';
+let cpu=0;
+const $=s=>document.querySelector(s);
+
+/* ============================== networking ============================== */
+const pend={};let flushT=null;
+function send(k,v){V[k]=v;pend[k]=v;if(!flushT)flushT=setTimeout(flush,35);}
+function flush(){flushT=null;const s=Object.keys(pend).map(k=>k+'='+pend[k]).join('\n');for(const k in pend)delete pend[k];
+  if(ws&&conn)try{ws.send(s)}catch(e){}}
+function sendRaw(s){if(ws&&conn)try{ws.send(s)}catch(e){}}
+function connect(){
+  clearTimeout(retry);
+  if(ws){ws.onclose=null;try{ws.close()}catch(e){}}
+  try{ws=new WebSocket('ws://'+host+':81/')}catch(e){retry=setTimeout(connect,2500);return}
+  ws.onopen=()=>{conn=true;updConn()};
+  ws.onclose=()=>{conn=false;updConn();retry=setTimeout(connect,2500)};
+  ws.onerror=()=>{};
+  ws.onmessage=e=>onMsg(String(e.data));
+}
+function onMsg(s){
+  let rerender=false,sync=[];
+  s.split('\n').forEach(line=>{
+    const i=line.indexOf('=');if(i<1)return;
+    const k=line.slice(0,i),v=line.slice(i+1);
+    if(k==='m'){meters(v.split(',').map(Number));return}
+    if(k==='a.list'){afbList=v?v.split(',').map(Number):[];if(page==='afb')renderChips();return}
+    if(k==='fw'){fw=v;return}
+    V[k]=parseFloat(v);
+    if(/\.(on|type|mode|pp)$/.test(k))rerender=true;else sync.push(k);
+  });
+  if(page==='home'||rerender)render();else sync.forEach(syncKey);
+}
+function updConn(){
+  document.querySelectorAll('.cn').forEach(e=>{e.classList.toggle('ok',conn);e.lastChild.textContent=conn?t('conn'):t('disc')});
+  const st=$('#st');if(st)st.textContent=conn?t('conn')+' · '+host:t('disc');
+}
+
+/* ============================== UI building blocks ============================== */
+const fmtv=(v,step,unit)=>(step<1?Number(v).toFixed(1):Math.round(v))+(unit||'');
+function sl(key,label,min,max,step,unit){
+  const v=V[key];
+  return `<div class="row"><div class="lab"><span>${label}</span><b data-v="${key}">${fmtv(v,step,unit)}</b></div><input type="range" min="${min}" max="${max}" step="${step}" value="${v}" style="--p:${(v-min)/(max-min)*100}%" data-k="${key}" data-u="${unit||''}" data-s="${step}" aria-label="${label}"></div>`;
+}
+const tg=(key,label)=>`<div class="row trow"><span>${label}</span><button class="sw" aria-pressed="${V[key]>0.5}" data-tg="${key}" aria-label="${label}"></button></div>`;
+const seg=(key,opts)=>`<div class="seg">${opts.map((o,i)=>`<button class="${i==V[key]?'a':''}" data-sg="${key}" data-o="${i}">${o}</button>`).join('')}</div>`;
+const bar=id=>`<div class="bar"><div data-m="${id}"></div></div>`;
+const typeName=n=>t(FXT[V['e'+n+'.type']|0]);
+function head(p,pw){
+  return `<div class="hd" style="--c:${COL[p]}"><button class="back" data-go="home" aria-label="back">${svg('back')}</button>${svg(p)}<div><h1>${t(p)}</h1></div><span class="sp"></span><div class="cn ${conn?'ok':''}"><i></i><span>${conn?t('conn'):t('disc')}</span></div>${pw?`<button class="sw" aria-pressed="${V[pw]>0.5}" data-tg="${pw}" aria-label="on/off"></button>`:''}</div>`;
+}
+
+/* ============================== pages ============================== */
+function home(){
+  return `<div class="grid">${ORDER.map(p=>{
+    let sub='',on=true;
+    if(p==='fx1'||p==='fx2'){const n=p[2];on=V['e'+n+'.on']>0.5;sub=typeName(n)}
+    else if(p==='eq'){on=V['eq.on']>0.5;sub='10-Band EQ'}
+    else if(p==='comp'){on=V['c.on']>0.5;sub='Compressor'}
+    else if(p==='lim'){on=V['l.on']>0.5;sub='Limiter'}
+    else if(p==='afb'){on=V['a.on']>0.5;sub='Anti-Feedback'}
+    else if(p==='io'){sub='PCM1808 · PCM5102'}
+    else if(p==='set'){sub=''}
+    return `<button class="tile ${on?'on':''} ${p==='io'||p==='set'?'sys':''}" style="--c:${COL[p]}" data-go="${p}"><i class="led"></i>${svg(p)}<span class="n">${t(p)}</span><span class="e" ${p==='set'?'id="st"':''}>${p==='set'?(conn?t('conn')+' · '+host:t('disc')):sub}</span></button>`}).join('')}</div>`;
+}
+function fxPage(n){
+  const ty=V['e'+n+'.type']|0,pre='e'+n+'.'+FXT[ty]+'.';
+  const sp=SP[FXT[ty]];
+  let h=head('fx'+n,'e'+n+'.on')+`<div class="body">${seg('e'+n+'.type',FXT.map(x=>t(x)))}<div class="cols">`;
+  sp.forEach(p=>{h+=p.length===1?tg(pre+p[0],t('p_'+p[0])):sl(pre+p[0],t('p_'+p[0]),p[1],p[2],p[3],p[4])});
+  h+='</div>';
+  if(ty===2)h+=`<div style="margin-top:12px"><button class="btn" data-tap="${pre}time">${t('tap')}</button></div>`;
+  return h+'</div>';
+}
+function eqPage(){
+  const F=['31','62','125','250','500','1k','2k','4k','8k','16k'];
+  return head('eq','eq.on')+`<div class="body"><div class="card"><svg class="curve" id="curve" viewBox="0 0 300 46" preserveAspectRatio="none"><line x1="0" y1="23" x2="300" y2="23" stroke="#3a4660"/><path id="cpath" fill="none" stroke="${COL.eq}" stroke-width="2.5"/></svg><div class="eq">${F.map((f,i)=>`<div class="band" data-b="${i}"><em></em><div class="bt"><div class="f"></div><div class="z"></div><div class="k"></div></div><span>${f}</span></div>`).join('')}</div></div><div class="cap" style="text-align:center">${t('eqhint')}</div></div>`;
+}
+function compPage(){
+  return head('comp','c.on')+`<div class="body"><div class="cols"><div>${sl('c.thr',t('thr'),-60,0,1,' dB')}${sl('c.ratio',t('ratio'),1,20,0.5,' :1')}${sl('c.mk',t('mk'),0,18,0.5,' dB')}</div><div>${sl('c.att',t('att'),1,200,1,' ms')}${sl('c.rel',t('rel'),10,1000,5,' ms')}
+  <svg viewBox="0 0 100 100" style="width:100%;height:clamp(60px,22vh,110px);background:var(--panel);border-radius:10px;margin-top:6px"><path d="M0 100L100 0" stroke="#3a4660" stroke-dasharray="3 3" fill="none"/><path id="tc" stroke="${COL.comp}" stroke-width="2.5" fill="none"/></svg>
+  <div class="mt gr" style="margin-top:10px"><span>${t('gr')}</span>${bar('gr')}</div></div></div></div>`;
+}
+function limPage(){
+  return head('lim','l.on')+`<div class="body"><div class="cols"><div>${sl('l.ceil',t('ceil'),-12,0,0.5,' dB')}${sl('l.rel',t('rel'),10,500,5,' ms')}</div><div>${sl('l.gain',t('lgain'),0,12,0.5,' dB')}<div class="mt" style="margin-top:14px"><span>OUT</span>${bar('out')}<span>${t('gr')}</span><div class="gr"><div class="bar"><div data-m="gr"></div></div></div></div><div style="margin-top:10px"><span class="clip" id="clip"></span></div></div></div></div>`;
+}
+function afbPage(){
+  return head('afb','a.on')+`<div class="body"><div class="cols"><div>${seg('a.mode',[t('auto'),t('manual')])}${sl('a.sens',t('sens'),0,100,1,' %')}${sl('a.n',t('nn'),1,12,1,'')}${sl('a.depth',t('depth'),3,24,1,' dB')}</div><div><div class="card"><div class="cap">${t('notches')}</div><div class="chips" id="chips"></div></div><button class="btn" data-clr="1">${t('clear')}</button></div></div></div>`;
+}
+function ioPage(){
+  return head('io')+`<div class="body"><div class="cols"><div>${sl('g.ing',t('ing'),-12,12,0.5,' dB')}${sl('g.vol',t('vol'),0,100,1,' %')}${tg('g.mute',t('mute'))}</div><div><div class="mt"><span>IN</span>${bar('in')}<span>OUT</span>${bar('out')}</div><div class="info" style="margin-top:14px;grid-template-columns:1fr 1fr"><div>${t('rate')}<b>48 kHz</b></div><div>${t('cpu')}<b id="cpu">${cpu} %</b></div><div>${t('buf')}<b>64 · 1.3 ms</b></div><div>${t('bits')}<b>24 / 32 bit</b></div></div></div></div></div>`;
+}
+function setPage(){
+  return head('set')+`<div class="body"><div class="cols"><div><div class="card"><div class="cap">${t('lang')}</div><div class="lang">${Object.keys(LANGS).map(k=>`<button class="${k==lang?'a':''}" data-lang="${k}">${LANGS[k]}</button>`).join('')}</div></div>
+  <div class="card"><div class="cap">${t('addr')}</div><input class="inp" id="host" value="${host}" inputmode="decimal" aria-label="${t('addr')}"><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" data-conn="1">${t('connect')}</button><button class="btn" data-wifi="1">${t('wifi')}</button></div><div class="cap" style="margin-top:10px" id="st">${conn?t('conn')+' · '+host:t('disc')}</div></div></div>
+  <div><div class="card"><div class="cap">${t('wifihint')} (ESP32-FX)</div><div style="display:flex;flex-direction:column;gap:10px"><button class="btn" data-save="1">${t('save')}</button><button class="btn" data-reset="1">${t('reset')}</button></div><div class="cap" style="margin-top:12px;direction:ltr;text-align:start">FW ${fw||'-'}</div></div></div></div></div>`;
+}
+
+/* ============================== render ============================== */
+function render(){
+  document.documentElement.lang=lang;document.documentElement.dir=RTL[lang]?'rtl':'ltr';
+  $('#rot').textContent=t('rot');
+  const f={home,fx1:()=>fxPage(1),fx2:()=>fxPage(2),eq:eqPage,comp:compPage,lim:limPage,afb:afbPage,io:ioPage,set:setPage}[page];
+  $('#app').innerHTML=f();
+  $('#app').style.setProperty('--acc',COL[page]||'#f0b441');
+  if(page==='eq')for(let i=0;i<10;i++)setBand(i,V['eq.'+i],false);
+  if(page==='comp')curveComp();
+  if(page==='afb')renderChips();
+}
+function go(p){page=p;render()}
+function syncKey(k){
+  const el=document.querySelector(`[data-k="${k}"]`);
+  if(el){el.value=V[k];const mn=+el.min,mx=+el.max;el.style.setProperty('--p',((V[k]-mn)/(mx-mn)*100)+'%');
+    const b=document.querySelector(`[data-v="${k}"]`);if(b)b.textContent=fmtv(V[k],+el.dataset.s,el.dataset.u)}
+  const m=/^eq\.(\d)$/.exec(k);if(m&&page==='eq')setBand(+m[1],V[k],false);
+  if(page==='comp')curveComp();
+}
+function renderChips(){
+  const c=$('#chips');if(!c)return;
+  c.innerHTML=afbList.length?afbList.map(f=>`<span>${f>=1000?(f/1000).toFixed(2)+' kHz':f+' Hz'}</span>`).join(''):`<span style="color:var(--muted)">${t('none')}</span>`;
+}
+function curveComp(){
+  const tc=$('#tc');if(!tc)return;
+  const th=V['c.thr'],r=V['c.ratio'],mk=V['c.mk'],X=v=>(v+60)/60*100,Y=v=>100-Math.max(0,Math.min(100,(v+60)/60*100));
+  tc.setAttribute('d',`M0 ${Y(-60+mk)}L${X(th)} ${Y(th+mk)}L100 ${Y(th+(0-th)/r+mk)}`);
+}
+/* EQ */
+function setBand(i,v,send_){
+  V['eq.'+i]=v;
+  const b=document.querySelector(`[data-b="${i}"]`);if(!b)return;
+  const y=(1-(v+12)/24)*100;
+  b.querySelector('.k').style.top=y+'%';
+  const fl=b.querySelector('.f');fl.style.top=Math.min(y,50)+'%';fl.style.height=Math.abs(y-50)+'%';
+  b.querySelector('em').textContent=(v>0?'+':'')+(Number.isInteger(v)?v:v.toFixed(1));
+  const pts=[];for(let j=0;j<10;j++)pts.push([15+j*30,23-V['eq.'+j]/12*19]);
+  let d=`M${pts[0]}`;
+  for(let j=0;j<9;j++){const p0=pts[j-1]||pts[j],p1=pts[j],p2=pts[j+1],p3=pts[j+2]||p2;
+    d+=`C${p1[0]+(p2[0]-p0[0])/6},${p1[1]+(p2[1]-p0[1])/6} ${p2[0]-(p3[0]-p1[0])/6},${p2[1]-(p3[1]-p1[1])/6} ${p2[0]},${p2[1]}`}
+  const cp=$('#cpath');if(cp)cp.setAttribute('d',d);
+  if(send_)send('eq.'+i,v);
+}
+let drag=null;
+function eqMove(e){if(drag===null)return;const r=document.querySelector(`[data-b="${drag}"] .bt`).getBoundingClientRect();
+  setBand(drag,Math.round(Math.max(-12,Math.min(12,(0.5-(e.clientY-r.top)/r.height)*24))*2)/2,true)}
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('.band');if(b){drag=+b.dataset.b;eqMove(e)}});
+document.addEventListener('pointermove',eqMove);
+document.addEventListener('pointerup',()=>{drag=null});
+document.addEventListener('dblclick',e=>{const b=e.target.closest('.band');if(b)setBand(+b.dataset.b,0,true)});
+
+/* ============================== events ============================== */
+document.addEventListener('input',e=>{
+  const r=e.target;if(r.type!=='range')return;
+  const v=parseFloat(r.value);
+  r.style.setProperty('--p',((v-r.min)/(r.max-r.min)*100)+'%');
+  const b=document.querySelector(`[data-v="${r.dataset.k}"]`);if(b)b.textContent=fmtv(v,+r.dataset.s,r.dataset.u);
+  send(r.dataset.k,v);
+  if(page==='comp')curveComp();
+});
+let tapT=0;
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const d=b.dataset;
+  if(d.go){go(d.go);return}
+  if(d.tg){const v=V[d.tg]>0.5?0:1;send(d.tg,v);b.setAttribute('aria-pressed',v>0.5);if(/\.on$/.test(d.tg)&&page==='home')render();return}
+  if(d.sg){send(d.sg,+d.o);render();return}
+  if(d.lang){lang=d.lang;store.set('fx.lang',lang);render();return}
+  if(d.tap){const n=performance.now();if(tapT&&n-tapT<2000){const ms=Math.max(0,Math.min(2000,Math.round((n-tapT)/10)*10));send(d.tap,ms);render()}tapT=n;return}
+  if(d.clr){sendRaw('a.clear=1');afbList=[];renderChips();return}
+  if(d.conn){host=($('#host').value||'192.168.4.1').trim();store.set('fx.host',host);connect();return}
+  if(d.wifi){if(window.Android&&Android.openWifiSettings)Android.openWifiSettings();return}
+  if(d.save){sendRaw('save=1');return}
+  if(d.reset){Object.assign(V,DEF);sendRaw('reset=1');render();return}
+});
+window.__back=()=>{if(page!=='home'){go('home');return true}return false};
+
+/* ============================== meters ============================== */
+function meters(a){
+  const [inl,outl,gr,c]=a;cpu=c;
+  document.querySelectorAll('[data-m]').forEach(el=>{
+    const id=el.dataset.m;
+    el.style.width=(id==='in'?inl*100:id==='out'?outl*100:Math.min(1,gr/24)*100)+'%'});
+  const cl=$('#clip');if(cl)cl.classList.toggle('h',outl>0.985);
+  const cp=$('#cpu');if(cp)cp.textContent=c+' %';
+}
+
+render();
+connect();
+</script>
+</body>
+</html>
